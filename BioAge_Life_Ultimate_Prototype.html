@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BioAge Dynamic Pricing Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #F8FAFC 0%, #E2E8F0 100%);
+        }
+        
+        /* Ring progress animations */
+        .ring-container {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .ring-svg {
+            transform: rotate(-90deg);
+        }
+        
+        .ring-bg {
+            fill: none;
+            stroke: #E5E7EB;
+            stroke-width: 8;
+        }
+        
+        .ring-progress {
+            fill: none;
+            stroke-width: 8;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 0.6s ease, stroke 0.3s ease;
+        }
+        
+        .ring-hrv { stroke: #10B981; }
+        .ring-vo2 { stroke: #3B82F6; }
+        .ring-sleep { stroke: #8B5CF6; }
+        
+        .slider-modern {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #E5E7EB;
+            outline: none;
+        }
+        
+        .slider-modern::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #10B981;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+            transition: transform 0.2s;
+        }
+        
+        .slider-modern::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+        
+        .card-glass {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+        
+        .bio-age-display {
+            font-size: 96px;
+            font-weight: 800;
+            line-height: 1;
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: pulse-gentle 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse-gentle {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.9; }
+        }
+        
+        .metric-card {
+            transition: all 0.3s ease;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+        
+        .badge-status {
+            display: inline-flex;
+            align-items: center;
+            padding: 8px 20px;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 13px;
+            letter-spacing: 0.5px;
+        }
+        
+        .badge-optimized {
+            background: linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%);
+            color: #065F46;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+        }
+        
+        .badge-premature {
+            background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+            color: #92400E;
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+        }
+        
+        .badge-improving {
+            background: linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%);
+            color: #1E40AF;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+        }
+        
+        .premium-box {
+            background: linear-gradient(135deg, #0A1628 0%, #1E293B 100%);
+            color: white;
+        }
+        
+        .impact-bar {
+            height: 8px;
+            border-radius: 4px;
+            background: #E5E7EB;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .impact-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.6s ease;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-slate-900 to-slate-800 text-white py-6 shadow-xl">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="flex items-center space-x-3">
+                        <div class="text-3xl">🧬</div>
+                        <div>
+                            <h1 class="text-3xl font-bold">BioAge Dynamic Pricing Engine</h1>
+                            <p class="text-emerald-400 text-sm mt-1">See how real-time biomarkers calculate personalized biological age</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-xs text-slate-400 uppercase tracking-wider">Interactive Demo</div>
+                    <div class="text-xl font-bold text-emerald-400">v2.0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-6 py-10">
+        
+        <!-- Persona Selector -->
+        <div class="mb-8">
+            <div class="card-glass rounded-2xl p-6 shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Viewing Profile</div>
+                        <div class="flex items-center space-x-2">
+                            <span id="personaName" class="text-2xl font-bold text-slate-900">Alex "The Runner"</span>
+                            <span class="text-sm text-slate-500">•</span>
+                            <span id="personaDesc" class="text-sm text-slate-600">Elite Athlete</span>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="loadPersona('alex')" class="px-4 py-2 bg-emerald-500 text-white rounded-lg font-semibold text-sm hover:bg-emerald-600 transition">Alex</button>
+                        <button onclick="loadPersona('jordan')" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-semibold text-sm hover:bg-slate-300 transition">Jordan</button>
+                        <button onclick="loadPersona('sarah')" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-semibold text-sm hover:bg-slate-300 transition">Sarah</button>
+                    </div>
+                </div>
+                <div class="flex items-center text-sm text-slate-600">
+                    <span class="mr-2">📅</span>
+                    <span>Chronological age: <span id="displayChronoAge" class="font-bold text-slate-900">45</span></span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="grid lg:grid-cols-5 gap-8">
+            
+            <!-- Left: Biomarker Rings (3 columns) -->
+            <div class="lg:col-span-3 space-y-6">
+                
+                <!-- HRV Ring Card -->
+                <div class="card-glass rounded-2xl p-6 shadow-lg metric-card">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2 mb-1">
+                                <span class="text-2xl">💓</span>
+                                <h3 class="text-lg font-bold text-slate-900">Heart Rate Variability</h3>
+                            </div>
+                            <p class="text-sm text-slate-500 mb-4">Excellent autonomic balance</p>
+                            
+                            <input 
+                                type="range" 
+                                id="hrvSlider" 
+                                min="20" 
+                                max="100" 
+                                value="85" 
+                                class="slider-modern mb-3"
+                                oninput="updateMetrics()"
+                            >
+                            
+                            <div class="flex justify-between text-xs text-slate-500">
+                                <span>20 ms (Poor)</span>
+                                <span id="hrvPercent" class="font-bold text-emerald-600 text-base">85%</span>
+                                <span>100 ms (Elite)</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Ring Tracker -->
+                        <div class="ml-6 ring-container">
+                            <svg class="ring-svg" width="120" height="120">
+                                <circle class="ring-bg" cx="60" cy="60" r="52"></circle>
+                                <circle id="ringHRV" class="ring-progress ring-hrv" cx="60" cy="60" r="52" 
+                                        stroke-dasharray="327" stroke-dashoffset="50"></circle>
+                            </svg>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <div class="text-center">
+                                    <div id="hrvValue" class="text-3xl font-bold text-emerald-600">85</div>
+                                    <div class="text-xs text-slate-500">ms</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- VO2 Max Ring Card -->
+                <div class="card-glass rounded-2xl p-6 shadow-lg metric-card">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2 mb-1">
+                                <span class="text-2xl">🏃</span>
+                                <h3 class="text-lg font-bold text-slate-900">VO₂ Max</h3>
+                            </div>
+                            <p class="text-sm text-slate-500 mb-4">Elite cardiovascular fitness</p>
+                            
+                            <input 
+                                type="range" 
+                                id="vo2Slider" 
+                                min="25" 
+                                max="60" 
+                                value="54" 
+                                class="slider-modern mb-3"
+                                oninput="updateMetrics()"
+                            >
+                            
+                            <div class="flex justify-between text-xs text-slate-500">
+                                <span>25 (Poor)</span>
+                                <span id="vo2Percent" class="font-bold text-blue-600 text-base">90%</span>
+                                <span>60 (Elite)</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Ring Tracker -->
+                        <div class="ml-6 ring-container">
+                            <svg class="ring-svg" width="120" height="120">
+                                <circle class="ring-bg" cx="60" cy="60" r="52"></circle>
+                                <circle id="ringVO2" class="ring-progress ring-vo2" cx="60" cy="60" r="52" 
+                                        stroke-dasharray="327" stroke-dashoffset="30"></circle>
+                            </svg>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <div class="text-center">
+                                    <div id="vo2Value" class="text-3xl font-bold text-blue-600">54</div>
+                                    <div class="text-xs text-slate-500">ml/kg/min</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Sleep Ring Card -->
+                <div class="card-glass rounded-2xl p-6 shadow-lg metric-card">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2 mb-1">
+                                <span class="text-2xl">😴</span>
+                                <h3 class="text-lg font-bold text-slate-900">Sleep Score</h3>
+                            </div>
+                            <p class="text-sm text-slate-500 mb-4">Optimal — full recovery cycles</p>
+                            
+                            <input 
+                                type="range" 
+                                id="sleepSlider" 
+                                min="30" 
+                                max="100" 
+                                value="92" 
+                                class="slider-modern mb-3"
+                                oninput="updateMetrics()"
+                            >
+                            
+                            <div class="flex justify-between text-xs text-slate-500">
+                                <span>30 (Poor)</span>
+                                <span id="sleepPercent" class="font-bold text-purple-600 text-base">92%</span>
+                                <span>100 (Perfect)</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Ring Tracker -->
+                        <div class="ml-6 ring-container">
+                            <svg class="ring-svg" width="120" height="120">
+                                <circle class="ring-bg" cx="60" cy="60" r="52"></circle>
+                                <circle id="ringSleep" class="ring-progress ring-sleep" cx="60" cy="60" r="52" 
+                                        stroke-dasharray="327" stroke-dashoffset="25"></circle>
+                            </svg>
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <div class="text-center">
+                                    <div id="sleepValue" class="text-3xl font-bold text-purple-600">92</div>
+                                    <div class="text-xs text-slate-500">/100</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Composite Health Index -->
+                <div class="card-glass rounded-2xl p-6 shadow-lg">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="text-sm font-semibold text-slate-700 uppercase tracking-wider">Composite Health Index</div>
+                        <div id="compositeScore" class="text-3xl font-bold text-emerald-600">89%</div>
+                    </div>
+                    <div class="impact-bar">
+                        <div id="compositeFill" class="impact-fill bg-gradient-to-r from-red-400 via-yellow-400 to-emerald-500" style="width: 89%"></div>
+                    </div>
+                    <div class="flex justify-between text-xs text-slate-500 mt-2">
+                        <span>Poor</span>
+                        <span>Average</span>
+                        <span>Excellent</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right: Output Panel (2 columns) -->
+            <div class="lg:col-span-2 space-y-6">
+                
+                <!-- BioAge Result -->
+                <div class="card-glass rounded-2xl p-8 shadow-xl text-center">
+                    <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Biological Age</div>
+                    <div id="bioAgeNumber" class="bio-age-display mb-2">32</div>
+                    <div class="text-sm text-slate-600 mb-6">
+                        vs. <span id="vsChronoAge" class="text-xl font-bold text-slate-900">45</span> chronological
+                    </div>
+                    <div class="flex items-center justify-center mb-4">
+                        <div class="flex items-center space-x-2 px-4 py-2 bg-emerald-50 rounded-full">
+                            <span class="text-emerald-600 text-xl">↓</span>
+                            <span id="yearsDiff" class="text-2xl font-bold text-emerald-600">13</span>
+                            <span class="text-sm text-emerald-700 font-semibold">Years Younger</span>
+                        </div>
+                    </div>
+                    <div id="statusBadge" class="badge-status badge-optimized inline-flex">
+                        ✅ OPTIMIZED
+                    </div>
+                </div>
+                
+                <!-- Monthly Premium -->
+                <div class="premium-box rounded-2xl p-8 shadow-xl">
+                    <div class="text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-3">Monthly Premium</div>
+                    <div class="flex items-baseline justify-center mb-2">
+                        <span class="text-6xl font-bold text-emerald-400" id="premiumDollars">$71</span>
+                        <span class="text-xl text-slate-400 ml-2">.10</span>
+                        <span class="text-slate-500 ml-2">/mo</span>
+                    </div>
+                    <div class="text-center text-sm text-slate-400 mb-6">Dynamically priced from your biomarker inputs</div>
+                    
+                    <div class="border-t border-slate-700 pt-4">
+                        <div class="flex justify-between text-sm mb-2">
+                            <span class="text-slate-400">Annual cost:</span>
+                            <span id="annualCost" class="font-bold text-white">$852</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-slate-400">vs. Age-based pricing:</span>
+                            <span class="font-bold text-emerald-400" id="savings">Save $312/yr</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- What This Means -->
+                <div class="card-glass rounded-2xl p-6 shadow-lg">
+                    <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">What This Means</h3>
+                    <div id="insightText" class="text-sm text-slate-700 leading-relaxed">
+                        <span class="font-bold text-emerald-600">Great news.</span> Alex's body is functioning 
+                        <span class="font-bold">13 years younger</span> than their calendar age — a strong indicator of 
+                        long-term health resilience. This translates to a <span class="font-bold">lower actuarial risk profile</span>, 
+                        reducing the monthly premium below the standard rate for age 45.
+                    </div>
+                </div>
+                
+                <!-- Drag Simulator Prompt -->
+                <div class="card-glass rounded-2xl p-6 shadow-lg border-2 border-emerald-200">
+                    <div class="flex items-start space-x-3">
+                        <div class="text-2xl">🎯</div>
+                        <div>
+                            <h3 class="text-sm font-bold text-emerald-900 mb-1">Longevity Simulator</h3>
+                            <p class="text-xs text-slate-600">
+                                Drag the sliders above to see real-time impact on Biological Age & Monthly Premium
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Formula Explanation -->
+        <div class="mt-10 card-glass rounded-2xl p-8 shadow-lg">
+            <div class="text-center mb-6">
+                <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">The Actuarial Formula</h3>
+                <div class="text-lg font-mono text-slate-900">
+                    <span class="text-emerald-600 font-bold">Δ HRV</span> = 
+                    <span class="text-slate-600">∀10ms → BioAge </span>
+                    <span class="text-red-600">±1.5yr</span>
+                    <span class="mx-3">•</span>
+                    <span class="text-blue-600 font-bold">Δ VO₂</span> = 
+                    <span class="text-slate-600">∀5 units → BioAge </span>
+                    <span class="text-red-600">±2yr</span>
+                    <span class="mx-3">•</span>
+                    <span class="text-purple-600 font-bold">Δ Sleep</span> = 
+                    <span class="text-slate-600">∀10 pts → BioAge </span>
+                    <span class="text-red-600">±1yr</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const PERSONAS = {
+            alex: {
+                name: "Alex \"The Runner\"",
+                desc: "Elite Athlete",
+                chronoAge: 45,
+                hrv: 85,
+                vo2: 54,
+                sleep: 92
+            },
+            jordan: {
+                name: "Jordan \"The Executive\"",
+                desc: "Stressed Professional",
+                chronoAge: 30,
+                hrv: 30,
+                vo2: 32,
+                sleep: 55
+            },
+            sarah: {
+                name: "Sarah \"The Improver\"",
+                desc: "Health Enthusiast",
+                chronoAge: 55,
+                hrv: 62,
+                vo2: 45,
+                sleep: 81
+            }
+        };
+        
+        let currentPersona = 'alex';
+        
+        function loadPersona(persona) {
+            currentPersona = persona;
+            const p = PERSONAS[persona];
+            
+            document.getElementById('personaName').textContent = p.name;
+            document.getElementById('personaDesc').textContent = p.desc;
+            document.getElementById('displayChronoAge').textContent = p.chronoAge;
+            document.getElementById('vsChronoAge').textContent = p.chronoAge;
+            
+            document.getElementById('hrvSlider').value = p.hrv;
+            document.getElementById('vo2Slider').value = p.vo2;
+            document.getElementById('sleepSlider').value = p.sleep;
+            
+            updateMetrics();
+        }
+        
+        function updateMetrics() {
+            const p = PERSONAS[currentPersona];
+            const chronoAge = p.chronoAge;
+            const hrv = parseInt(document.getElementById('hrvSlider').value);
+            const vo2 = parseInt(document.getElementById('vo2Slider').value);
+            const sleep = parseInt(document.getElementById('sleepSlider').value);
+            
+            // Update ring displays
+            updateRing('ringHRV', hrv, 20, 100, 'hrvValue', 'hrvPercent');
+            updateRing('ringVO2', vo2, 25, 60, 'vo2Value', 'vo2Percent');
+            updateRing('ringSleep', sleep, 30, 100, 'sleepValue', 'sleepPercent');
+            
+            // Calculate BioAge deltas
+            const hrvDelta = ((50 - hrv) / 10) * 1.5;
+            const vo2Delta = ((40 - vo2) / 5) * 2;
+            const sleepDelta = ((80 - sleep) / 10) * 1;
+            
+            const bioAge = Math.max(18, Math.round(chronoAge + hrvDelta + vo2Delta + sleepDelta));
+            const yearsDiff = Math.abs(chronoAge - bioAge);
+            
+            // Update BioAge display
+            document.getElementById('bioAgeNumber').textContent = bioAge;
+            document.getElementById('yearsDiff').textContent = yearsDiff;
+            
+            // Calculate premium
+            let basePremium = (40 * bioAge / 20);
+            if (bioAge < chronoAge) {
+                basePremium *= 0.8;
+            } else if (bioAge > chronoAge) {
+                basePremium *= 1.15;
+            }
+            
+            const monthlyPremium = Math.round(basePremium * 10) / 10;
+            const annualCost = Math.round(monthlyPremium * 12);
+            
+            document.getElementById('premiumDollars').textContent = '$' + Math.floor(monthlyPremium);
+            document.getElementById('annualCost').textContent = '$' + annualCost.toLocaleString();
+            
+            // Calculate savings
+            const standardPremium = (40 * chronoAge / 20);
+            const savings = Math.round((standardPremium - monthlyPremium) * 12);
+            
+            if (savings > 0) {
+                document.getElementById('savings').textContent = 'Save $' + savings + '/yr';
+                document.getElementById('savings').className = 'font-bold text-emerald-400';
+            } else {
+                document.getElementById('savings').textContent = '+$' + Math.abs(savings) + '/yr';
+                document.getElementById('savings').className = 'font-bold text-red-400';
+            }
+            
+            // Update status badge
+            const statusBadge = document.getElementById('statusBadge');
+            if (bioAge < chronoAge) {
+                statusBadge.className = 'badge-status badge-optimized inline-flex';
+                statusBadge.textContent = '✅ OPTIMIZED';
+            } else if (bioAge > chronoAge) {
+                statusBadge.className = 'badge-status badge-premature inline-flex';
+                statusBadge.textContent = '⚠️ PREMATURE AGING';
+            } else {
+                statusBadge.className = 'badge-status badge-improving inline-flex';
+                statusBadge.textContent = '📈 ON TRACK';
+            }
+            
+            // Update composite score
+            const composite = Math.round(((hrv - 20) / 80 + (vo2 - 25) / 35 + (sleep - 30) / 70) / 3 * 100);
+            document.getElementById('compositeScore').textContent = composite + '%';
+            document.getElementById('compositeFill').style.width = composite + '%';
+            
+            // Update insight text
+            const insightText = document.getElementById('insightText');
+            const name = PERSONAS[currentPersona].name.split('"')[1].split('"')[0];
+            
+            if (bioAge < chronoAge) {
+                insightText.innerHTML = `<span class="font-bold text-emerald-600">Great news.</span> ${name}'s body is functioning <span class="font-bold">${yearsDiff} years younger</span> than their calendar age — a strong indicator of long-term health resilience. This translates to a <span class="font-bold">lower actuarial risk profile</span>, reducing the monthly premium below the standard rate for age ${chronoAge}.`;
+            } else if (bioAge > chronoAge) {
+                insightText.innerHTML = `<span class="font-bold text-orange-600">Attention needed.</span> ${name}'s biomarkers suggest <span class="font-bold">${yearsDiff} years of premature aging</span>. This indicates elevated health risks, resulting in a <span class="font-bold">higher premium</span> compared to age-based pricing. Improving these metrics can significantly reduce costs.`;
+            } else {
+                insightText.innerHTML = `<span class="font-bold text-blue-600">On track.</span> ${name}'s biological age matches their chronological age. Premium is set at the standard rate for age ${chronoAge}. Small improvements in any biomarker can unlock savings.`;
+            }
+        }
+        
+        function updateRing(ringId, value, min, max, valueId, percentId) {
+            const ring = document.getElementById(ringId);
+            const percent = ((value - min) / (max - min)) * 100;
+            const circumference = 327;
+            const offset = circumference - (percent / 100) * circumference;
+            
+            ring.style.strokeDashoffset = offset;
+            document.getElementById(valueId).textContent = value;
+            document.getElementById(percentId).textContent = Math.round(percent) + '%';
+        }
+        
+        // Initialize
+        loadPersona('alex');
+    </script>
+</body>
+</html>
